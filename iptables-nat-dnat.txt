@@ -1,0 +1,5 @@
+
+iptables -t nat -A PREROUTING -p udp -i eth0 -m multiport --dports 80,1176,1187,2442,3883,4122,4184,4232,4243,4646,4661 -j DNAT --to 192.168.253.10
+iptables -t nat -A PREROUTING -p tcp -i eth0 -m multiport --dports 80,1176,1187,2442,3883,4122,4184,4232,4243,4646,4661 -j DNAT --to 192.168.253.10
+iptables -t nat -A PREROUTING -p udp -i eth0 -m multiport --dports 5041,7111,8080,8593,8777,8866,9911,9939,14142,4245        -j DNAT --to 192.168.253.10
+iptables -t nat -A PREROUTING -p tcp -i eth0 -m multiport --dports 5041,7111,8080,8593,8777,8866,9911,9939,14142,4245        -j DNAT --to 192.168.253.10

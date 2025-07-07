@@ -1,0 +1,21 @@
+ud="/var/www/clients/client22/web23"
+cmd="/usr/sbin/jk_cp"
+$cmd $ud /usr/bin/mc
+$cmd $ud /usr/bin/links
+$cmd $ud /usr/bin/nslookup
+$cmd $ud /usr/bin/unzip
+$cmd $ud /usr/bin/unrar
+$cmd $ud /usr/bin/rar
+$cmd $ud /bin/bzip2
+$cmd $ud /usr/bin/whois
+$cmd $ud /usr/bin/w
+$cmd $ud /usr/bin/du
+$cmd $ud /bin/df
+$cmd $ud /usr/bin/who
+$cmd $ud /usr/bin/which
+$cmd $ud /usr/bin/ldd
+$cmd $ud /usr/sbin/named 
+$cmd $ud /usr/bin/openssl
+$cmd $ud /usr/lib/x86_64-linux-gnu/libssl.a
+$cmd $ud /usr/lib/x86_64-linux-gnu/libssl.so
+

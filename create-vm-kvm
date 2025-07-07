@@ -1,0 +1,1 @@
+# virt-install -n test -r 4096   --os-variant=rhel7 --disk  /var/lib/libvirt/images/testimage,device=disk,bus=virtio -w   bridge=br0,model=virtio --vnc --noautoconsole --import

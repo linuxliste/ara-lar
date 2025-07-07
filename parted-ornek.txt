@@ -1,0 +1,8 @@
+#!/bin/bash
+
+ parted --script /dev/sda mklabel gpt mkpart pv1 0% 50% mkpart pv2 50% 70%                 set 1 lvm on set 2 lvm on   mkpart data xfs 70% 90%                 mkpart swap linux-swap 90% 100%  print
+
+
+ parted --script /dev/sda mklabel gpt mkpart pv1 0% 50% mkpart pv2 50% 70% \
+                set 1 lvm on set 2 lvm on   mkpart data xfs 70% 90% \
+                mkpart swap linux-swap 90% 100%  print

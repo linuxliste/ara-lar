@@ -1,0 +1,17 @@
+#multipath kaldir
+multipath -f mpathb
+#buffer temizle
+blockdev --flushbufs /dev/sdx
+
+#diski kaldir
+echo 1 > /sys/block/sdx/device/delete
+
+lsscsi -g
+
+
+asagidaki uc sekilden biri olabilir
+
+# echo 1 >  /sys/block/sda/device/delete  or
+# echo 1 >  /sys/class/scsi_device/0:1:0:0/device/delete  or
+# echo 1 > /sys/class/scsi_generic/sg1/device/delete
+

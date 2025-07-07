@@ -1,0 +1,9 @@
+#!/bin/bash
+#dizin="/var/www/clients/client7/web6/"
+dizin="$1"
+jk_cp -j $dizin  /usr/bin/mysql
+jk_cp -j $dizin  /usr/bin/mc
+jk_cp -j $dizin  /usr/bin/lynx
+jk_cp -j $dizin  /usr/bin/links
+jk_cp -j $dizin  /bin/ping
+

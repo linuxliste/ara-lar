@@ -1,0 +1,5 @@
+  systemctl set-property  user.slice CPUAccounting=yes
+  systemctl --runtime set-property  user.slice CPUAccounting=yes
+  systemctl --runtime set-property  user.slice CPUQuota=50%
+  systemctl  set-property  user.slice CPUQuota=50%
+

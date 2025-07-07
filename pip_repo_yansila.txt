@@ -1,0 +1,6 @@
+pip install python-pypi-mirror
+
+pypi-mirror  download  *  -d piprepo 
+
+pypi-mirror  download  wheel  -d piprepo 
+
