@@ -1,0 +1,4 @@
+podman images --format "{{.ID}} {{.Repository}}" | \
+grep "<none>" | \
+awk '{print $1}' | \
+xargs -r podman rmi -f
