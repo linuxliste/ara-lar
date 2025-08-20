@@ -3,8 +3,8 @@
 # VM Atölyeleri Yönetici Script - Birleşik Versiyon
 # Tüm VM işlemlerini tek script'ten yönetme aracı
 
-# VM listesi
-VMS=(
+# Altyapı VM'leri (revert olmaz, sadece start/stop)
+INFRASTRUCTURE_VMS=(
     "00-ipa.local.lab"
     "00-sat.local.lab"
     "00-util.local.lab"
@@ -12,13 +12,23 @@ VMS=(
     "ex374-control22.local.lab"
     "00-git.local.lab"
     "00-bastion.local.lab"
+    "ex374-hub22.local.lab"
+    "rh294admin.local.lab"
+)
+
+# Laboratuvar VM'leri (revert yapılabilir)
+LAB_VMS=(
     "servera.local.lab"
     "serverb.local.lab"
     "serverc.local.lab"
     "serverd.local.lab"
     "servere.local.lab"
-    "ex374-hub22.local.lab"
-    "rh294admin.local.lab"
+)
+
+# Tüm VM'ler (start/stop işlemleri için)
+ALL_VMS=(
+    "${INFRASTRUCTURE_VMS[@]}"
+    "${LAB_VMS[@]}"
 )
 
 # Snapshot ayarları
@@ -381,11 +391,25 @@ revert_vm() {
 # VM'leri paralel veya sıralı işle
 process_vms() {
     local operation="$1"
+    local vm_list=()
+    
+    # Hangi VM listesini kullanacağını belirle
+    case "$operation" in
+        "revert")
+            vm_list=("${LAB_VMS[@]}")
+            echo -e "${CYAN}Sadece laboratuvar VM'leri işlenecek: ${#LAB_VMS[@]} VM${NC}"
+            ;;
+        *)
+            vm_list=("${ALL_VMS[@]}")
+            echo -e "${CYAN}Tüm VM'ler işlenecek: ${#ALL_VMS[@]} VM${NC}"
+            ;;
+    esac
+    
     local success_count=0
     local error_count=0
     local already_status=0
     
-    PROGRESS_TOTAL=${#VMS[@]}
+    PROGRESS_TOTAL=${#vm_list[@]}
     PROGRESS_CURRENT=0
     
     local total_start_time=$(date +%s)
@@ -394,7 +418,7 @@ process_vms() {
         echo -e "${YELLOW}Paralel işlem modu aktif (Maksimum $MAX_JOBS eş zamanlı)${NC}"
         echo ""
         
-        for vm in "${VMS[@]}"; do
+        for vm in "${vm_list[@]}"; do
             while [[ $(jobs -r | wc -l) -ge $MAX_JOBS ]]; do
                 sleep 1
             done
@@ -418,7 +442,7 @@ process_vms() {
         
         wait
     else
-        for vm in "${VMS[@]}"; do
+        for vm in "${vm_list[@]}"; do
             case "$operation" in
                 "start") start_vm "$vm" ;;
                 "shutdown") shutdown_vm "$vm" ;;
@@ -458,7 +482,37 @@ list_vms() {
     local stopped=0
     local other=0
     
-    for vm in "${VMS[@]}"; do
+    echo -e "${MAGENTA}--- Altyapı VM'leri ---${NC}"
+    for vm in "${INFRASTRUCTURE_VMS[@]}"; do
+        if vm_exists "$vm"; then
+            local state=$(check_vm_state "$vm")
+            case "$state" in
+                "running")
+                    echo -e "${GREEN}✓ $vm - Çalışıyor${NC}"
+                    ((running++))
+                    ;;
+                "shut off")
+                    echo -e "${RED}✗ $vm - Kapalı${NC}"
+                    ((stopped++))
+                    ;;
+                "paused")
+                    echo -e "${YELLOW}⏸ $vm - Duraklatılmış${NC}"
+                    ((other++))
+                    ;;
+                *)
+                    echo -e "${CYAN}? $vm - $state${NC}"
+                    ((other++))
+                    ;;
+            esac
+        else
+            echo -e "${RED}! $vm - Bulunamadı${NC}"
+            ((other++))
+        fi
+    done
+    
+    echo ""
+    echo -e "${MAGENTA}--- Laboratuvar VM'leri ---${NC}"
+    for vm in "${LAB_VMS[@]}"; do
         if vm_exists "$vm"; then
             local state=$(check_vm_state "$vm")
             case "$state" in
@@ -490,7 +544,9 @@ list_vms() {
     echo -e "${GREEN}Çalışan: $running${NC}"
     echo -e "${RED}Kapalı: $stopped${NC}"
     echo -e "${YELLOW}Diğer: $other${NC}"
-    echo -e "${CYAN}Toplam: ${#VMS[@]}${NC}"
+    echo -e "${CYAN}Altyapı VM: ${#INFRASTRUCTURE_VMS[@]}${NC}"
+    echo -e "${CYAN}Laboratuvar VM: ${#LAB_VMS[@]}${NC}"
+    echo -e "${CYAN}Toplam: ${#ALL_VMS[@]}${NC}"
 }
 
 # Yardım mesajı
@@ -500,10 +556,10 @@ show_help() {
     echo -e "${CYAN}Kullanım: $0 <komut> [seçenekler]${NC}"
     echo ""
     echo -e "${YELLOW}Komutlar:${NC}"
-    echo "  start       VM'leri başlat"
-    echo "  stop        VM'leri kapat"
-    echo "  restart     VM'leri yeniden başlat"
-    echo "  revert      VM'leri snapshot'a geri döndür"
+    echo "  start       Tüm VM'leri başlat"
+    echo "  stop        Tüm VM'leri kapat"
+    echo "  restart     Tüm VM'leri yeniden başlat"
+    echo "  revert      Sadece laboratuvar VM'lerini snapshot'a geri döndür"
     echo "  status      VM durumlarını listele"
     echo "  list        VM durumlarını detaylı göster"
     echo ""
@@ -590,7 +646,9 @@ main() {
     case "$command" in
         start|başlat)
             echo -e "${BLUE}=== VM Atölyeleri Başlatma İşlemi ===${NC}"
-            echo -e "${CYAN}Toplam VM sayısı: ${#VMS[@]}${NC}"
+            echo -e "${CYAN}Altyapı VM sayısı: ${#INFRASTRUCTURE_VMS[@]}${NC}"
+            echo -e "${CYAN}Laboratuvar VM sayısı: ${#LAB_VMS[@]}${NC}"
+            echo -e "${CYAN}Toplam VM sayısı: ${#ALL_VMS[@]}${NC}"
             echo -e "${CYAN}Paralel işlem: $([ "$PARALLEL" == "true" ] && echo "Aktif" || echo "Pasif")${NC}"
             echo -e "${CYAN}Boot bekleme: $([ "$WAIT_FOR_BOOT" == "true" ] && echo "Aktif" || echo "Pasif")${NC}"
             echo ""
@@ -599,7 +657,7 @@ main() {
             local exit_code=$?
             
             echo ""
-            virsh list --all | grep -E "$(IFS="|"; echo "${VMS[*]}")" || echo "İlgili VM'ler bulunamadı"
+            virsh list --all | grep -E "$(IFS="|"; echo "${ALL_VMS[*]}")" || echo "İlgili VM'ler bulunamadı"
             
             if [[ $exit_code -eq 0 ]]; then
                 echo -e "${GREEN}🎉 Tüm işlemler başarılı!${NC}"
@@ -611,7 +669,9 @@ main() {
             
         stop|kapat)
             echo -e "${BLUE}=== VM Atölyeleri Kapatma İşlemi ===${NC}"
-            echo -e "${CYAN}Toplam VM sayısı: ${#VMS[@]}${NC}"
+            echo -e "${CYAN}Altyapı VM sayısı: ${#INFRASTRUCTURE_VMS[@]}${NC}"
+            echo -e "${CYAN}Laboratuvar VM sayısı: ${#LAB_VMS[@]}${NC}"
+            echo -e "${CYAN}Toplam VM sayısı: ${#ALL_VMS[@]}${NC}"
             echo -e "${CYAN}Paralel işlem: $([ "$PARALLEL" == "true" ] && echo "Aktif" || echo "Pasif")${NC}"
             echo -e "${CYAN}Zorla kapatma: $([ "$FORCE_SHUTDOWN" == "true" ] && echo "Aktif" || echo "Pasif")${NC}"
             echo -e "${CYAN}Kapatma bekleme: $([ "$WAIT_FOR_SHUTDOWN" == "true" ] && echo "Aktif (${SHUTDOWN_TIMEOUT}s)" || echo "Pasif")${NC}"
@@ -621,7 +681,7 @@ main() {
             local exit_code=$?
             
             echo ""
-            virsh list --all | grep -E "$(IFS="|"; echo "${VMS[*]}")" || echo "İlgili VM'ler bulunamadı"
+            virsh list --all | grep -E "$(IFS="|"; echo "${ALL_VMS[*]}")" || echo "İlgili VM'ler bulunamadı"
             
             if [[ $exit_code -eq 0 ]]; then
                 echo -e "${GREEN}🎉 Tüm kapatma işlemleri başarılı!${NC}"
@@ -636,7 +696,7 @@ main() {
             echo ""
             
             # Önce kapat
-            echo -e "${YELLOW}1. Aşama: VM'ler kapatılıyor...${NC}"
+            echo -e "${YELLOW}1. Aşama: Tüm VM'ler kapatılıyor...${NC}"
             WAIT_FOR_SHUTDOWN=true
             process_vms "shutdown"
             
@@ -644,12 +704,12 @@ main() {
             sleep 3
             
             # Sonra başlat
-            echo -e "${YELLOW}2. Aşama: VM'ler başlatılıyor...${NC}"
+            echo -e "${YELLOW}2. Aşama: Tüm VM'ler başlatılıyor...${NC}"
             process_vms "start"
             local exit_code=$?
             
             echo ""
-            virsh list --all | grep -E "$(IFS="|"; echo "${VMS[*]}")" || echo "İlgili VM'ler bulunamadı"
+            virsh list --all | grep -E "$(IFS="|"; echo "${ALL_VMS[*]}")" || echo "İlgili VM'ler bulunamadı"
             
             if [[ $exit_code -eq 0 ]]; then
                 echo -e "${GREEN}🎉 Yeniden başlatma işlemi başarılı!${NC}"
@@ -660,28 +720,30 @@ main() {
             ;;
             
         revert|geridon|snapshot)
-            echo -e "${BLUE}=== VM Atölyeleri Snapshot'a Geri Döndürme İşlemi ===${NC}"
+            echo -e "${BLUE}=== Laboratuvar VM'leri Snapshot'a Geri Döndürme İşlemi ===${NC}"
             echo -e "${CYAN}Snapshot: $SNAPSHOT_NAME${NC}"
-            echo -e "${CYAN}Toplam VM sayısı: ${#VMS[@]}${NC}"
+            echo -e "${CYAN}Sadece laboratuvar VM'leri işlenecek: ${#LAB_VMS[@]} VM${NC}"
+            echo -e "${YELLOW}Not: Altyapı VM'leri (${#INFRASTRUCTURE_VMS[@]} VM) snapshot'a geri döndürülmeyecek${NC}"
             echo ""
             
             process_vms "revert"
             local exit_code=$?
             
             echo ""
-            virsh list --all | grep -E "$(IFS="|"; echo "${VMS[*]}")" || echo "İlgili VM'ler bulunamadı"
+            echo -e "${BLUE}=== Laboratuvar VM'leri Son Durum ===${NC}"
+            virsh list --all | grep -E "$(IFS="|"; echo "${LAB_VMS[*]}")" || echo "Laboratuvar VM'leri bulunamadı"
             
             if [[ $exit_code -eq 0 ]]; then
-                echo -e "${GREEN}🎉 Tüm VM'ler başarıyla işlendi!${NC}"
+                echo -e "${GREEN}🎉 Tüm laboratuvar VM'leri başarıyla işlendi!${NC}"
             else
-                echo -e "${YELLOW}⚠️ Bazı VM'lerde sorun yaşandı.${NC}"
+                echo -e "${YELLOW}⚠️ Bazı laboratuvar VM'lerinde sorun yaşandı.${NC}"
             fi
             exit $exit_code
             ;;
             
         status|durum)
             echo -e "${BLUE}=== Hızlı Durum Özeti ===${NC}"
-            virsh list --all | grep -E "$(IFS="|"; echo "${VMS[*]}")" || echo "İlgili VM'ler bulunamadı"
+            virsh list --all | grep -E "$(IFS="|"; echo "${ALL_VMS[*]}")" || echo "İlgili VM'ler bulunamadı"
             ;;
             
         list|listele)
